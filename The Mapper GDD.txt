@@ -1,0 +1,136 @@
+[The Mapper]:
+
+Primary gameplay loop:
+ explore world with survival mechanics (wildlife, hunger, thirst)
+ note points of interest (wildlife, plants, towns, etc.)
+ return to town
+ 
+Secondary gameplay loop:
+ person requests path to something
+ if player does not have the requested something, they must undertake an expedition to find it or reject "job"
+ player gives path to person
+ if path is accurate and person returns, reputation increases
+ if path is not accurate, person does not return, ruining opportunity for further jobs
+ if no more people in town, player loses
+ 
+Tertiary gameplay loop:
+ maps become inaccurate over time and must be re-surveyed
+ some people will not benefit the town/become a problem for the player and can be dealt with by sending them to a "bad" location
+ player's actions will shape where other settlements spring up and the prosperity of their town
+  - other settlements can become sources for other missions
+  
+The Pitch:
+You are a cartographer that has arrived at a small frontier town in need of your services.  Problem is, you haven't mapped the area yet.  You need to set out on expeditions to map areas of interest, making sure that you bring enough supplies to survive the wilderness.  With your hard-earned information, you can then help the town get the supplies needed to thrive.  Be careful to not put yourself out of business, however.  A townsperson with a whole map won't need to come back to you for your services again.  You have bills to pay, after all.
+
+[The Mapper] is a top down exploration game where the player must manually create a world map and sell portions of it to to make ends meet.  The cartographer's office needs to be maintained and the player needs to be fed, creating the tension of getting people to their goal while not giving too much away where the people no longer need the player.
+
+The Art Style:
+The game will be split into two different portions:  The meat-space and the map-space.
+The meat-space is where the player navigates their character in the world and goes about exploring the areas around the town.  The artwork for this section will be something similar to Stardew Valley or A Link to the Past.
+The map-space is somewhat abstracted, where the player places things that they find in a given tile.  The artwork for this section is going to be simplified as compared to the meat-space, with artwork in the same vein as Advance Wars or Link's Awakening.
+
+Coding layout:
+
+each tile is created on a 1.5 scale of the window to make it harder for the player to calculate.
+Home tile is [0, 0] and the player can navigate in all directions from the home tile.  The additional tiles are generated when the player enters a tile adjacent to the edge.  Worst case scenario is the game generating three additional tiles.  
+
+Milestones:
+	Milestone 0:
+	FAIL	- Mockup for meat-space screen created.
+		    - Mockup for map-space screen created.
+		Estimated time: 1 week
+		
+	Milestone 1:
+		    - Player can move around a single tile and collide with generated objects.
+	PARTIAL	- Player has movement mechanics, expedition length mechanics.
+	FAIL	- Player artwork is generated
+		Estimated time: 1 week
+		
+	Milestone 2:
+		    - Player can open up the map-space screen and assign features to a tile.
+		    - Player can select a tile and remove specific features.
+	FAIL	- Map terrain type features artwork is generated.                           COMPLETED IN MS 11
+		Estimated time: 1 week
+	
+	Milestone 3:
+		    - Player can navigate to other (blank) tiles.
+		    - Player can scroll on the map-space map.
+	FAIL	- Map improvement features artwork is generated.
+		Estimated time: 1 week
+	
+	Milestone 4:
+		    - Generate new tile types that can be called when new tiles need to be generated.
+	FAIL	- Player can create a path/tiles to share in map-space                      COMPLETED IN MS 5
+		Estimated time: 1 week
+
+----------------------------------------------------------------------------------------------------------
+
+	Milestone 5:
+		    - Implement map goal navigation system
+	FAIL    - Generate the player's character
+	FAIL    - Implement expedition mechanic
+		Estimated time: 1 week
+
+	Milestone 6:
+	        - Implement map request system
+	FAIL	- Generate representation of terrain (map space only)                       COMPLETED IN MS 11
+	FAIL	- Generate representation of improvements (meat space and map space)
+		Estimated time: 1 week
+
+	Milestone 7:
+	FAIL	- Generate representation of features (meat space and map space)
+		    - Implement visualization of map space terrain (selected and minimized)
+	FAIL	- Implement animal class (small/large prey)
+		Estimated time: 1 week
+
+	Milestone 8:
+	FAIL	- Generate representation of animals (meat space and map space)
+	FAIL	- Generate player's cartographer's office (exterior only)
+	FAIL	- Implement fearful predator behavior (small predator)
+		Estimated time: 1 week
+
+	Milestone 9:
+	FAIL    - Revise rules on map generation for meat space
+	    No Time Estimate given
+
+----------------------------------------------------------------------------------------------------------
+
+    Milestone 10:
+        - Replace placeholder zones in map space with better representations
+        - Add adjacency requirements for quest generation
+        - Add and hook up depletion levels to tiles
+        - Create word wrap functionality for quest tiles when quests are too long
+    	Estimated time: 1 week
+
+    Milestone 11:
+        - Replace placeholder for quest board in meat space with better representation
+        - Generate town boundaries for origin tile
+    - Create title menu
+    - Create font resize functionality for quest tiles
+		Estimated time: 1 week
+
+    Milestone 12:
+    - Create interface for viewing other maps
+        - Create list of decor that will be included for each biome (town, forest, mountain, plain, waterway)
+        - Create meat space terrain artwork for Town, Forest, Mountain, Plain
+        - Create meat space terrain artwork for Waterway
+    	Estimated time: 1 week
+
+    Milestone 13:
+    - Create decor assets for town biome
+    - Create settlement requirements quest
+    - Create small creature object
+    	Estimated time: 1 week
+
+    Milestone 14:
+    - Create nest object
+    - Hook up small creature behavior to move around associated nest object
+    - Create kill condition for nest object if world tile it is in becomes depleted
+    	Estimated time: 1 week
+
+    Backlog:
+    - Change meat_space and map_space to be specific to player
+    - Rework meat_space to work with multiple players
+    - Create meat_space able to handle multiple update calls for same objects
+    - Rework map_space to work with multiple players
+    - Move player_map to player
