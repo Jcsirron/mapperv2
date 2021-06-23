@@ -1,4 +1,5 @@
 from pygame import sprite, rect, surface, draw, mask
+from decor import Decorator
 from random import choice
 from map import TERRAIN, FEATURES, IMPROVEMENTS, ANIMALS
 from screen_handler import *
@@ -6,28 +7,7 @@ from globals import *
 from button import *
 from meat_space_assets import QUEST_BOARD
 
-QUEST_DIFFICULTIES = ['easy', 'medium']
-
-
-# TODO: Create artwork for the quest board
-class QuestBoard(sprite.Sprite):
-
-    def __init__(self):
-        sprite.Sprite.__init__(self)
-        self.image = QUEST_BOARD
-        self.image.set_colorkey(self.image.get_at((0, self.image.get_height()-1)))
-        self.rect = self.image.get_rect()
-        mask_cover = surface.Surface((self.image.get_width(), self.image.get_height()/4))
-        mask_cover.blit(self.image, (0, -int(self.image.get_height()*3/4)))
-        self.collidable = True
-        self.mask = mask.from_surface(mask_cover)
-        self.mask_offset = (0, int(self.image.get_height()*3/4))
-
-    def update(self, buttons):
-        pass
-
-    def move(self, x, y):
-        self.rect = self.rect.move(x, y)
+QUEST_DIFFICULTIES = ['easy', 'easy deplete', 'avoid', 'adjacent', 'multiple']
 
 
 class Quest(object):
@@ -40,13 +20,25 @@ class Quest(object):
         self.created_day = day
         if expiration is not None:
             self.expiration_day = None
+        else:
+            self.expiration_day = expiration
         self.difficulty = difficulty
         self.offset = 16
+        self.active = True
+        self.completed = False
+        self.rect = None
+        self.__generate_image__()
+        self.update_rect(x_offset, y_offset, index)
+
+    def __generate_image__(self):
         self.surface = pygame.surface.Surface((int(SCREEN_SIZE[0] * 2 / 3) - self.offset * 2, self.offset * 4))
         self.surface.set_colorkey(self.surface.get_at((0, 0)))
         pygame.draw.rect(self.surface, WHITE, self.surface.get_rect(), border_radius=12)
         text_font = font.Font(FONT, 24)
-        quest_text = "I need to visit a "
+        if not self.will_deplete:
+            quest_text = "I need to visit a "
+        else:
+            quest_text = "I need to harvest from a "
         if len(self.needs) > 1:
             for need in self.needs:
                 if self.needs.index(need) < len(self.needs) - 1:
@@ -60,17 +52,16 @@ class Quest(object):
                 quest_text = quest_text + " and avoid " + str(avoid) + "s"
         if len(self.adjacent) > 0:
             for adjacent in self.adjacent:
-                quest_text = quest_text + " and next to " + str(adjacent) + "s"
+                quest_text = quest_text + " next to " + str(adjacent) + "s"
         quest_text = quest_text + "."
         text = text_font.render(quest_text, False, BROWN)
         draw_rect = (int((self.surface.get_rect()[2] - text.get_rect()[2])/2), int((self.surface.get_rect()[3] - text.get_rect()[3])/2))
         self.surface.blit(text, draw_rect)
         if self.will_deplete:
-            # TODO: Make this more obvious with other assets later
-            draw.circle(self.surface, RED, (16, 16), 6)
+            draw.circle(self.surface, RED, (self.surface.get_width() - 16, 16), 6)
+
+    def update_rect(self, x_offset, y_offset, index):
         self.rect = self.surface.get_rect().move(x_offset + self.offset, y_offset + self.offset * 5 * index)
-        self.active = True
-        self.completed = False
 
     def __repr__(self):
         return "%s quest: needs: %s avoid: %s" % (self.difficulty, self.needs, self.avoid)
@@ -88,6 +79,8 @@ class Quest(object):
         has_adjacents = False
         goals = self.needs.copy()
         for tile in path:
+            if tile in world_map.stored_tiles:
+                world_map.unpack_tile(tile, "worldmap.txt")
             if tile in world_map.map_set and len(self.avoid) > 0 and not world_map.map_set[tile].depleted:
                 if world_map.map_set[tile].terrain in self.avoid:
                     avoids_all = False
@@ -119,18 +112,25 @@ class Quest(object):
         else:
             return False
 
+    def export_quest(self):
+        return {'day': self.created_day, 'needs': self.needs, 'difficulty': self.difficulty, 'expiration': self.expiration_day, 'avoid': self.avoid, 'adjacent': self.adjacent,
+                'depleting': self.will_deplete}
+
 
 class QuestMenu(object):
 
-    def __init__(self):
+    def __init__(self, loading=False):
         self.is_active = False
         self.surface = surface.Surface((int(SCREEN_SIZE[0] * 2 / 3), int(SCREEN_SIZE[1] * 2 / 3)))
         self.surface.fill(BROWN)
         self.rect = pygame.rect.Rect(int(SCREEN_SIZE[0]/6), int(SCREEN_SIZE[1]/6), self.surface.get_width(), self.surface.get_height())
         font_text = font.Font(FONT, 36)
         title = font_text.render("Quest Board", False, WHITE)
-        self.quest_text = font.Font(FONT, 18)
+        will_deplete_font = font.Font(FONT, 16)
+        will_deplete = will_deplete_font.render("Will deplete area?", False, WHITE)
+        self.quest_text = font.Font(FONT, 20)
         self.surface.blit(title, (int(self.surface.get_width()/2 - title.get_width()/2), 16))
+        self.surface.blit(will_deplete, (int(self.surface.get_width() - will_deplete.get_width() - 8), 36))
         self.close_button = Button("Close", FONT, 24)
         self.close_button.update_location(location=(int(SCREEN_CENTER[0] - self.close_button.get_width() / 2), int(SCREEN_SIZE[1] / 6 * 5)))
         self.active_quests = []
@@ -140,20 +140,18 @@ class QuestMenu(object):
         self.completed_quests_rect = (self.rect.left + self.completed_quests_text.get_width()/4, self.rect.bottom - 36)
         self.failed_quests_text = self.quest_text.render("Failed Quests: " + str(len(self.failed_quests)), False, WHITE)
         self.failed_quests_rect = (self.rect.left + int(self.rect.width/2 + title.get_width()/2 + self.failed_quests_text.get_width()/4), self.rect.bottom - 36)
-        self.generate_quest('easy deplete')
-        self.generate_quest('easy deplete')
-        self.generate_quest('medium')
-        self.generate_quest('medium2')
-        self.generate_quest('medium3')
+        if not loading:
+            while len(self.active_quests) < 5:
+                self.generate_quest()
         self.active = False
 
     def update(self, mouse, movement):
         if self.active:
-            if mouse[0] is not False:
-                if not (self.rect.collidepoint(mouse[1])):
+            if mouse[1] is not False:
+                if not (self.rect.collidepoint(mouse[0])):
                     self.active = False
                 for quest in self.active_quests:
-                    if quest.rect.collidepoint(mouse[1]):
+                    if quest.rect.collidepoint(mouse[0]):
                         return quest
             if movement[2]:
                 self.active = False
@@ -187,9 +185,11 @@ class QuestMenu(object):
         for quest in self.active_quests:
             quest.move_rect(self.rect[0], self.rect[1] + 64, x)
             x += 1
+        # TODO: Change how active quests are added to the quest board.
+        if len(self.active_quests) < 5:
+            self.generate_quest()
         self.completed_quests_text = self.quest_text.render("Completed Quests: " + str(len(self.completed_quests)), False, WHITE)
         self.failed_quests_text = self.quest_text.render("Failed Quests: " + str(len(self.failed_quests)), False, WHITE)
-
 
     @staticmethod
     def generate_requirements(difficulty):
@@ -201,22 +201,59 @@ class QuestMenu(object):
         needs.append(choice(TERRAIN))
         if difficulty == "easy deplete":
             will_deplete = True
-        elif difficulty == "medium":
+        elif difficulty == "avoid":
             avoid_terrain = choice(TERRAIN)
             while avoid_terrain in needs:
                 avoid_terrain = choice(TERRAIN)
             avoid.append(avoid_terrain)
-        # TODO: Rename difficulty so it makes more sense
-        elif difficulty == "medium2":
+        elif difficulty == "adjacent":
             adjacent.append(choice(TERRAIN))
-        # TODO: Rename difficulty so it makes more sense
-        elif difficulty == "medium3":
+        elif difficulty == "multiple":
             need_terrain = choice(TERRAIN)
             while need_terrain in needs:
                 need_terrain = choice(TERRAIN)
             needs.append(need_terrain)
         return needs, avoid, adjacent, will_deplete
 
-    def generate_quest(self, difficulty):
-        reqs = self.generate_requirements(difficulty)
+    def generate_quest(self, difficulty=None):
+        if difficulty is None:
+            reqs = self.generate_requirements(choice(QUEST_DIFFICULTIES))
+        else:
+            reqs = self.generate_requirements(difficulty)
         self.active_quests.append(Quest(1, reqs[0], difficulty, avoid=reqs[1], adjacent=reqs[2], x_offset=self.rect[0], y_offset=self.rect[1] + 64, index=len(self.active_quests), depleting=reqs[3]))
+
+    def load_quest(self, quest_type, **kwargs):
+        day, expiration = 1, None
+        needs, difficulty = None, None
+        avoid, adjacent, depleting = None, None, False
+        for key, value in kwargs.items():
+            if key == "day":
+                day = value
+            elif key == "needs":
+                needs = value
+            elif key == "difficulty":
+                difficulty = value
+            elif key == "expiration":
+                expiration = value
+            elif key == "avoid":
+                avoid = value
+            elif key == "adjacent":
+                adjacent = value
+            elif key == "depleting":
+                depleting = value
+        if quest_type == "completed":
+            self.completed_quests.append(Quest(day, needs=needs, difficulty=difficulty, expiration=expiration, avoid=avoid, adjacent=adjacent, x_offset=self.rect[0], y_offset=self.rect[1] + 64, index=len(self.active_quests), depleting=depleting))
+        elif quest_type == "active":
+            self.active_quests.append(Quest(day, needs=needs, difficulty=difficulty, expiration=expiration, avoid=avoid, adjacent=adjacent, x_offset=self.rect[0], y_offset=self.rect[1] + 64, index=len(self.active_quests), depleting=depleting))
+        else:
+            self.failed_quests.append(Quest(day, needs=needs, difficulty=difficulty, expiration=expiration, avoid=avoid, adjacent=adjacent, x_offset=self.rect[0], y_offset=self.rect[1] + 64, index=len(self.active_quests), depleting=depleting))
+
+    def export_quest_board(self):
+        export = {"completed": [], "failed": [], "active": []}
+        for quest in self.completed_quests:
+            export["completed"].append(quest.export_quest())
+        for quest in self.failed_quests:
+            export["failed"].append(quest.export_quest())
+        for quest in self.active_quests:
+            export["active"].append(quest.export_quest())
+        return export

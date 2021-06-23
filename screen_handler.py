@@ -13,7 +13,7 @@ from os import environ
 
 
 # Name the window screen
-pygame.display.set_caption("The Mapper")
+pygame.display.set_caption("CartograTour")
 # Set the window icon
 pygame.display.set_icon(pygame.surface.Surface((32, 32)))
 # Center the window, since that's the nice way to do it.

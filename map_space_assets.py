@@ -5,11 +5,13 @@ from os import path
 
 
 # TODO: Create tiling for adjacent tiling, making the map space more cohesive
-FOREST_TILES = image.load(path.join('Artwork', "Forest tile.png"))
-MOUNTAIN_TILES = image.load(path.join('Artwork', "Mountains tile.png"))
-WATERWAY_TILES = image.load(path.join('Artwork', "Water tile.png"))
-PLAIN_TILES = image.load(path.join('Artwork', "Plain tile.png"))
-HOME_TILES = image.load(path.join("Artwork", "Home tile.png"))
+FOREST_TILES = image.load(path.join('Artwork', "Forest tile.png")).convert()
+MOUNTAIN_TILES = image.load(path.join('Artwork', "Mountains tile.png")).convert()
+WATERWAY_TILES = image.load(path.join('Artwork', "Swamp tile.png")).convert()
+PLAIN_TILES = image.load(path.join('Artwork', "Plain tile.png")).convert()
+HOME_TILES = image.load(path.join("Artwork", "Home tile.png")).convert()
+EDIT_ICON = image.load(path.join("Artwork", "Edit Icon.png")).convert()
+EDIT_ICON.set_colorkey(EDIT_ICON.get_at((0, 0)))
 
 
 forest_tile = surface_setup(FOREST_TILES, (64, 64))

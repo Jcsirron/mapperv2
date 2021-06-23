@@ -2,7 +2,7 @@ from map_space_assets import forest_tile, mountain_tile, waterway_tile, plain_ti
 from pygame import surface, rect
 from globals import *
 
-TERRAIN = ["forest", "plain", "waterway", "mountain"]
+TERRAIN = ["forest", "plain", "swamp", "mountain"]
 IMPROVEMENTS = ["road", "settlement", "ruins", "mine", "home"]
 FEATURES = ["glade", "outcropping", "fishing hole"]
 ANIMALS = ["small game", "large game", "small predator", "large predator"]
@@ -10,7 +10,7 @@ ANIMALS = ["small game", "large game", "small predator", "large predator"]
 
 class Tile(object):
 
-    def __init__(self, location, size, terrain=None, improvement=None, feature=None, animal=None):
+    def __init__(self, location, size, terrain=None, improvement=None, feature=None, animal=None, depleted=False, objects=None):
         self.location = location
         self.terrain = terrain
         self.improvement = improvement
@@ -18,18 +18,24 @@ class Tile(object):
         self.animals = animal
         self.surface = surface.Surface(size)
         self.surface.fill(BROWN)
-        self.rect = None
-        self.depleted = False
+        self.rect = rect.Rect(location[0]*size[0], location[1]*size[1], size[0], size[1])
+        self.depleted = depleted
         self.update_tile(terrain, improvement, feature, animal)
-        self.objects = []
+        if objects is not None:
+            self.objects = objects
+        else:
+            self.objects = []
 
     def __repr__(self):
         return "Tile()"
 
     def __str__(self):
+        objects = []
+        for i in self.objects:
+            objects.append(i.id)
         return "Class " + str(self.__repr__()) + "\tLocation: " + str(self.location) + "\tTerrain: " + \
                str(self.terrain) + "\tImprovement: " + str(self.improvement) + "\tFeature: " + str(self.feature) + \
-               "\tObjects: " + str(self.objects)
+               "\tObjects: " + str(objects)
 
     def update_tile(self, terrain=None, improvement=None, feature=None, animal=None, new_surface=None, depleted=None):
         if terrain is not None:
@@ -38,7 +44,7 @@ class Tile(object):
                 self.surface.blit(forest_tile, (0, 0))
             elif terrain == "plain":
                 self.surface.blit(plain_tile, (0, 0))
-            elif terrain == "waterway":
+            elif terrain == "swamp":
                 self.surface.blit(waterway_tile, (0, 0))
             elif terrain == "mountain":
                 self.surface.blit(mountain_tile, (0, 0))
@@ -88,7 +94,12 @@ class Tile(object):
 
     def update_objects(self, game_object):
         if game_object not in self.objects:
-            self.objects.append(game_object)
+            x = 0
+            for existing_object in self.objects:
+                if game_object.rect.centery <= existing_object.rect.centery:
+                    break
+                x += 1
+            self.objects.insert(x, game_object)
         elif game_object == "clear":
             self.objects = []
 
@@ -111,3 +122,17 @@ class Tile(object):
 
     def move_rect(self, distance):
         self.rect = self.rect.move(distance)
+
+    def export_stats(self):
+        return {"size": self.surface.get_size(), "terrain": self.terrain, "improvement": self.improvement, "feature": self.feature, "animals": self.animals, "depleted": self.depleted}
+
+    def export_objects(self):
+        export_list = []
+        for decor_object in self.objects:
+            export_list.append(decor_object.get_export_values((self.location[0] * self.surface.get_width(), self.location[1] * self.surface.get_height())))
+        return export_list
+
+    def export_all(self):
+        export = self.export_stats()
+        export['objects'] = self.export_objects()
+        return export
